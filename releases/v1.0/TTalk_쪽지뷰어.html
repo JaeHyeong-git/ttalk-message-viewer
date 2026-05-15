@@ -132,38 +132,13 @@
   .db-status{font-size:10.5px;padding:2px 8px;border-radius:5px;display:inline-flex;align-items:center;gap:4px}
   .db-status .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
   .db-status.ok .dot{background:#5cb85c}.db-status.ok{color:var(--text-mute)}
-
-  /* ===== 업로드 경고 배너 ===== */
-  .upload-info{font-size:11px;color:var(--text-mute);display:flex;align-items:center;gap:6px}
-  .upload-info b{color:var(--text-soft);font-weight:600}
-  .warning-banner{
-    flex:0 0 auto;
-    background:linear-gradient(90deg, #4a2a1a, #5c3320);
-    border-bottom:1px solid #7a4530;
-    color:#ffd9b3;
-    padding:9px 20px;
-    font-size:13px;
-    font-weight:500;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    animation: bannerPulse 2.5s ease-in-out infinite;
-  }
-  @keyframes bannerPulse {
-    0%, 100% { background:linear-gradient(90deg, #4a2a1a, #5c3320); }
-    50% { background:linear-gradient(90deg, #5c3320, #6e3d24); }
-  }
-  .warning-banner .wb-icon{font-size:15px}
-  .warning-banner b{color:#ffeacc}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1><span class="logo">T</span> TTalk 쪽지 뷰어 <span style="font-size:10px;font-weight:400;color:var(--text-mute);margin-left:4px">v1.1 · 2026.05.18</span></h1>
+    <h1><span class="logo">T</span> TTalk 쪽지 뷰어 <span style="font-size:10px;font-weight:400;color:var(--text-mute);margin-left:4px">v1.0 · 2026.05.15</span></h1>
     <div class="stats" id="stats"></div>
-    <span class="upload-info" id="uploadInfo"></span>
     <span class="db-status" id="dbStatus"></span>
     <div class="header-actions">
       <button class="btn primary" id="addBtn">📁 파일 추가</button>
@@ -173,7 +148,6 @@
       <button class="btn danger" id="clearBtn">전체 삭제</button>
     </div>
   </header>
-  <div class="warning-banner" id="warningBanner" style="display:none"></div>
   <div class="body-wrap">
     <aside class="sidebar">
       <div class="search-box">
@@ -304,10 +278,7 @@ function fqs(qs){for(const s of qs){const q=parseQ(s);if(q&&q.from)return q.from
 function pm(out,m){if(!m.time)return;if(!(m.body&&m.body.trim())&&!(m.title&&m.title.trim())&&!m.attach)return;out.push(m)}
 
 async function ingest(fn,raw){
-  const b=bx(fn),now=Date.now();
-  const existing=S.files.find(f=>f.name===fn);
-  if(existing){existing.uploadedAt=now;if(db)await dbP("files",{name:fn,box:b,uploadedAt:now})}
-  else{S.files.push({name:fn,box:b,uploadedAt:now});if(db)await dbP("files",{name:fn,box:b,uploadedAt:now})}
+  const b=bx(fn);if(!S.files.some(f=>f.name===fn)){S.files.push({name:fn,box:b});if(db)await dbP("files",{name:fn,box:b})}
   const p=parseFile(fn,raw),nw=[];
   for(const m of p){const k=dk(m);if(S.seen.has(k))continue;S.seen.add(k);m._key=k;S.messages.push(m);nw.push(m);}
   if(nw.length&&db)await dbPB("messages",nw);return nw.length;
@@ -403,27 +374,8 @@ function renderRight(){
   const sc=$("chatScroll");if(sc){if(S.query.trim()){const mk=sc.querySelector("mark");if(mk)mk.scrollIntoView({block:"center"});else sc.scrollTop=sc.scrollHeight}else sc.scrollTop=sc.scrollHeight}
 }
 
-function renderUploadInfo(){
-  const wb=$("warningBanner"),ui=$("uploadInfo");
-  if(!S.files.length){wb.style.display="none";ui.textContent="";return}
-  // 가장 최근 업로드 시각 (uploadedAt 없는 레거시 파일은 무시)
-  const times=S.files.map(f=>f.uploadedAt).filter(t=>t);
-  if(!times.length){wb.style.display="none";ui.textContent="";return}
-  const latest=Math.max(...times);
-  const days=Math.floor((Date.now()-latest)/(1000*60*60*24));
-  const dateStr=new Date(latest).toLocaleDateString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit"});
-  ui.innerHTML='<span>최근 업로드: <b>'+dateStr+'</b> ('+(days===0?'오늘':days+'일 전')+')</span>';
-  if(days>=20){
-    wb.style.display="flex";
-    wb.innerHTML='<span class="wb-icon">⚠️</span><span>파일을 업로드한지 <b>'+days+'일</b>이 지났습니다. 백업 파일을 업로드해주세요.</span>';
-  } else {
-    wb.style.display="none";
-  }
-}
-
 function render(){
   const ra=$("rightArea");
-  renderUploadInfo();
   if(!S.messages.length){
     ra.innerHTML='<div class="empty-state"><div class="big">불러온 쪽지가 없습니다</div><div class="sm">상단의 <b>📁 파일 추가</b> 버튼을 클릭하거나<br>txt 파일을 화면에 끌어다 놓으세요.<br><br>💾 <b>데이터는 브라우저에 영구 저장됩니다.</b></div></div>';
     $("stats").innerHTML="";$("convoList").innerHTML="";return}
