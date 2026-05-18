@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTalk 쪽지 뷰어</title>
+<style>
+  :root {
+    --bg: #1a1d24;
+    --bg-panel: #21252e;
+    --bg-panel-2: #272c37;
+    --bg-hover: #2e3440;
+    --bg-active: #323a4d;
+    --line: #353b47;
+    --line-soft: #2b303b;
+    --text: #e4e7ec;
+    --text-soft: #aab1bd;
+    --text-mute: #6b7280;
+    --accent: #5b9bd5;
+    --accent-soft: #2f4d6b;
+    --me-bubble: #2f6f4e;
+    --me-bubble-text: #eafff2;
+    --them-bubble: #2c313c;
+    --them-bubble-text: #e4e7ec;
+    --highlight: #f0c674;
+    --shadow: 0 2px 12px rgba(0,0,0,0.35);
+    --toast-bg: #3a7d5c;
+    --sidebar-w: 290px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:"Pretendard",-apple-system,"Malgun Gothic","맑은 고딕",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;overflow:hidden}
+  .app{display:flex;flex-direction:column;height:100vh}
+  header{flex:0 0 auto;padding:14px 20px;background:var(--bg-panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+  header h1 .logo{width:22px;height:22px;background:var(--accent);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:800}
+  .stats{font-size:12px;color:var(--text-mute);display:flex;gap:14px}.stats b{color:var(--text-soft);font-weight:600}
+  .header-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  button.btn{background:var(--bg-panel-2);color:var(--text-soft);border:1px solid var(--line);border-radius:7px;padding:7px 13px;font-size:12px;font-family:inherit;cursor:pointer;transition:all .15s}
+  button.btn:hover{background:var(--bg-hover);color:var(--text)}
+  button.btn.primary{background:var(--accent-soft);border-color:var(--accent);color:#dcebfb}
+  button.btn.primary:hover{background:var(--accent);color:#fff}
+  button.btn.danger{border-color:#a04040;color:#e08080}
+  button.btn.danger:hover{background:#5c2020;color:#ffb0b0}
+
+  .body-wrap{flex:1 1 auto;display:flex;flex-direction:row;min-height:0;overflow:hidden}
+  .sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);max-width:var(--sidebar-w);flex-shrink:0;flex-grow:0;background:var(--bg-panel);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+  .search-box{padding:12px;border-bottom:1px solid var(--line-soft)}
+  .search-box input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none}
+  .search-box input:focus{border-color:var(--accent)}
+  .search-hint{font-size:11px;color:var(--text-mute);margin-top:6px}
+  .convo-list{flex:1 1 auto;overflow-y:auto;overflow-x:hidden}
+  .convo-item{padding:11px 14px;border-bottom:1px solid var(--line-soft);cursor:pointer;display:flex;gap:10px;align-items:center;transition:background .12s;overflow:hidden;min-width:0}
+  .convo-item:hover{background:var(--bg-hover)}
+  .convo-item.active{background:var(--bg-active)}
+  .convo-item.active .ci-name{color:#fff}
+  .avatar{flex:0 0 38px;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff}
+  .ci-main{flex:1 1 auto;min-width:0;overflow:hidden}
+  .ci-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .ci-name{font-weight:600;font-size:13.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .ci-time{font-size:11px;color:var(--text-mute);flex:0 0 auto;white-space:nowrap}
+  .ci-preview{font-size:12px;color:var(--text-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .ci-count{flex:0 0 auto;background:var(--accent-soft);color:#cfe3f5;font-size:11px;font-weight:600;border-radius:10px;padding:1px 7px;white-space:nowrap}
+
+  .right-area{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+  .chat-header{flex:0 0 auto;padding:13px 20px;border-bottom:1px solid var(--line);background:var(--bg-panel);display:flex;align-items:center;gap:11px}
+  .chat-header .avatar{width:32px;height:32px;min-width:32px;font-size:13px}
+  .chat-header .ch-name{font-weight:700;font-size:14.5px}
+  .chat-header .ch-sub{font-size:11.5px;color:var(--text-mute);margin-top:1px}
+  .chat-scroll{flex:1 1 auto;overflow-y:auto;padding:22px 28px 30px;display:flex;flex-direction:column;gap:3px}
+  .day-divider{align-self:center;background:var(--bg-panel-2);color:var(--text-mute);font-size:11px;padding:3px 12px;border-radius:10px;margin:14px 0 10px}
+  .msg-row{display:flex;margin-top:9px}.msg-row.me{justify-content:flex-end}.msg-row.them{justify-content:flex-start}
+  .bubble{max-width:64%;padding:9px 13px;border-radius:14px;word-break:break-word;white-space:pre-wrap;box-shadow:var(--shadow)}
+  .msg-row.me .bubble{background:var(--me-bubble);color:var(--me-bubble-text);border-bottom-right-radius:4px}
+  .msg-row.them .bubble{background:var(--them-bubble);color:var(--them-bubble-text);border-bottom-left-radius:4px}
+  .bubble .b-title{font-size:12px;font-weight:700;opacity:.82;margin-bottom:3px;display:block}
+  .bubble .b-body{font-size:13.5px}
+  .bubble .b-meta{font-size:10.5px;opacity:.6;margin-top:4px;display:flex;gap:6px;align-items:center}
+  .bubble .b-attach{margin-top:5px;font-size:11.5px;background:rgba(255,255,255,0.08);border-radius:6px;padding:4px 8px;display:inline-flex;align-items:center;gap:5px}
+  .src-tag{font-size:9.5px;border:1px solid currentColor;border-radius:4px;padding:0 4px;opacity:.5}
+  mark{background:var(--highlight);color:#2a2200;border-radius:2px;padding:0 1px}
+
+  /* ===== 별표 버튼 ===== */
+  .star-btn{
+    position:absolute;top:6px;right:8px;
+    background:transparent;border:none;cursor:pointer;
+    font-size:14px;opacity:.35;transition:all .15s;
+    padding:2px 4px;line-height:1;color:inherit;
+  }
+  .bubble{position:relative}
+  .bubble:hover .star-btn{opacity:.7}
+  .star-btn:hover{opacity:1!important;transform:scale(1.2)}
+  .star-btn.on{opacity:1;color:#f0c674}
+  .msg-row.them .star-btn{right:auto;left:-26px;top:8px}
+  .msg-row.them .bubble:hover .star-btn{opacity:.6}
+
+  /* ===== 사이드바 섹션 (별표/검색어) ===== */
+  .sb-section{border-bottom:1px solid var(--line-soft);background:var(--bg-panel)}
+  .sb-section-header{
+    padding:9px 14px 7px;font-size:11px;font-weight:600;
+    color:var(--text-mute);display:flex;align-items:center;justify-content:space-between;
+    user-select:none;
+  }
+  .sb-section-header .sbh-title{display:flex;align-items:center;gap:5px}
+  .sb-section-header .sbh-toggle{cursor:pointer;font-size:10px;opacity:.6;padding:2px 5px}
+  .sb-section-header .sbh-toggle:hover{opacity:1}
+  .sb-section-body{padding:0 8px 8px}
+  .sb-section.collapsed .sb-section-body{display:none}
+
+  /* 저장한 쪽지 (별표) 미니 아이템 */
+  .starred-item{
+    padding:7px 9px;margin-bottom:4px;background:var(--bg-panel-2);
+    border:1px solid var(--line-soft);border-radius:6px;cursor:pointer;
+    font-size:11.5px;color:var(--text-soft);
+    display:flex;align-items:center;gap:6px;
+    overflow:hidden;transition:all .12s;
+  }
+  .starred-item:hover{background:var(--bg-hover);border-color:var(--line);color:var(--text)}
+  .starred-item .si-icon{font-size:11px;flex:0 0 auto;color:#f0c674}
+  .starred-item .si-name{font-weight:600;flex:0 0 auto;font-size:11px;color:var(--text)}
+  .starred-item .si-preview{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.75;font-size:11px}
+  .starred-empty{font-size:11px;color:var(--text-mute);text-align:center;padding:6px 0;opacity:.7}
+
+  /* 저장한 검색어 */
+  .kw-list{display:flex;flex-wrap:wrap;gap:5px}
+  .kw-chip{
+    background:var(--bg-panel-2);border:1px solid var(--line);border-radius:14px;
+    padding:3px 9px 3px 11px;font-size:11.5px;color:var(--text-soft);
+    display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+    transition:all .12s;max-width:100%;overflow:hidden;
+  }
+  .kw-chip:hover{background:var(--accent-soft);border-color:var(--accent);color:#dcebfb}
+  .kw-chip.active{background:var(--accent-soft);border-color:var(--accent);color:#fff}
+  .kw-chip .kw-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px}
+  .kw-chip .kw-del{font-size:13px;line-height:1;opacity:.5;cursor:pointer;padding:0 2px;flex:0 0 auto}
+  .kw-chip .kw-del:hover{opacity:1;color:#e08080}
+  .kw-add-btn{
+    background:transparent;border:1px dashed var(--line);color:var(--text-mute);
+    border-radius:14px;padding:3px 10px;font-size:11.5px;cursor:pointer;font-family:inherit;
+  }
+  .kw-add-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .kw-empty{font-size:11px;color:var(--text-mute);text-align:center;padding:4px 0;width:100%;opacity:.7}
+
+  /* 사이드바 탭 */
+  .sb-tabs{display:flex;border-bottom:1px solid var(--line-soft);background:var(--bg-panel)}
+  .sb-tab{
+    flex:1;padding:9px 6px;text-align:center;font-size:11.5px;
+    color:var(--text-mute);cursor:pointer;border-bottom:2px solid transparent;
+    transition:all .12s;user-select:none;
+  }
+  .sb-tab:hover{color:var(--text-soft);background:var(--bg-hover)}
+  .sb-tab.on{color:var(--accent);border-bottom-color:var(--accent);background:var(--bg-active)}
+  .sb-tab .sbt-count{
+    font-size:10px;background:var(--bg-panel-2);padding:1px 5px;border-radius:8px;
+    margin-left:4px;color:var(--text-mute);
+  }
+  .sb-tab.on .sbt-count{background:var(--accent-soft);color:#dcebfb}
+
+  /* 키워드 추가 모달 */
+  .kw-input-row{display:flex;gap:8px;margin-top:4px}
+  .kw-input-row input{
+    flex:1;background:var(--bg);border:1px solid var(--line);
+    border-radius:7px;padding:8px 10px;color:var(--text);
+    font-family:inherit;font-size:13px;outline:none;
+  }
+  .kw-input-row input:focus{border-color:var(--accent)}
+  .kw-input-row button{
+    background:var(--accent-soft);border:1px solid var(--accent);color:#dcebfb;
+    border-radius:7px;padding:0 14px;font-size:12px;cursor:pointer;font-family:inherit;
+  }
+  .kw-input-row button:hover{background:var(--accent);color:#fff}
+  .kw-modal-hint{font-size:11.5px;color:var(--text-mute);margin-top:10px;line-height:1.6}
+  .empty-state{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--text-mute);padding:40px}
+  .empty-state .big{font-size:17px;color:var(--text-soft);margin-bottom:8px;font-weight:600}
+  .empty-state .sm{font-size:13px;line-height:1.7}
+
+  /* ===== 모달 (공용) ===== */
+  .modal-bg{position:fixed;inset:0;background:rgba(10,12,16,0.75);display:none;align-items:center;justify-content:center;z-index:200}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--bg-panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.6);min-width:420px;max-width:540px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+  .modal-head{padding:16px 20px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between}
+  .modal-head h2{font-size:15px;font-weight:700}
+  .modal-close{background:none;border:none;color:var(--text-mute);font-size:20px;cursor:pointer;padding:0 4px;line-height:1}
+  .modal-close:hover{color:var(--text)}
+  .modal-body{padding:20px;overflow-y:auto;flex:1 1 auto}
+
+  /* ===== 파일 추가 모달 ===== */
+  .upload-zone{
+    border:2px dashed var(--line);border-radius:12px;padding:40px 30px;
+    text-align:center;cursor:pointer;transition:all .18s;
+  }
+  .upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--bg-panel-2)}
+  .upload-zone .uz-icon{font-size:36px;margin-bottom:10px}
+  .upload-zone .uz-main{color:var(--text-soft);font-weight:600;font-size:14px}
+  .upload-zone .uz-sub{font-size:12px;color:var(--text-mute);margin-top:6px}
+  .upload-zone .uz-or{font-size:11px;color:var(--text-mute);margin:14px 0 0}
+  .upload-zone .uz-btn{display:inline-block;margin-top:8px;background:var(--accent-soft);border:1px solid var(--accent);color:#dcebfb;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+  .upload-zone .uz-btn:hover{background:var(--accent);color:#fff}
+
+  /* ===== 파일 추가 모달 탭 ===== */
+  .add-tabs{display:flex;border-bottom:1px solid var(--line)}
+  .add-tab{
+    flex:1;padding:11px 8px;text-align:center;font-size:12.5px;
+    color:var(--text-mute);cursor:pointer;border-bottom:2px solid transparent;
+    transition:all .12s;user-select:none;
+  }
+  .add-tab:hover{color:var(--text-soft);background:var(--bg-hover)}
+  .add-tab.on{color:var(--accent);border-bottom-color:var(--accent);background:var(--bg-active)}
+
+  /* 텍스트 붙여넣기 영역 */
+  .paste-guide{
+    font-size:12.5px;color:var(--text-soft);line-height:1.6;
+    background:var(--bg-panel-2);border:1px solid var(--line-soft);
+    border-radius:8px;padding:11px 13px;margin-bottom:12px;
+  }
+  .paste-guide b{color:var(--accent);background:rgba(91,155,213,0.12);padding:1px 5px;border-radius:4px}
+  .paste-box-type{
+    display:flex;align-items:center;gap:14px;margin-bottom:10px;
+    font-size:12.5px;color:var(--text-soft);
+  }
+  .ptype-radio{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12.5px}
+  .ptype-radio input{cursor:pointer;accent-color:var(--accent)}
+  .paste-area{
+    width:100%;height:200px;resize:vertical;
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:11px 12px;color:var(--text);font-family:"D2Coding","Consolas",monospace;
+    font-size:12px;line-height:1.55;outline:none;
+  }
+  .paste-area:focus{border-color:var(--accent)}
+  .paste-actions{display:flex;align-items:center;justify-content:space-between;margin-top:11px;gap:10px}
+  .paste-hint{font-size:11.5px;color:var(--text-mute);flex:1 1 auto}
+  .paste-submit{
+    background:var(--accent-soft);border:1px solid var(--accent);color:#dcebfb;
+    border-radius:8px;padding:9px 22px;font-size:13px;font-weight:600;
+    cursor:pointer;font-family:inherit;flex:0 0 auto;
+  }
+  .paste-submit:hover{background:var(--accent);color:#fff}
+
+  /* ===== 업로드 내역 모달 ===== */
+  .file-list{list-style:none}
+  .file-list li{padding:10px 0;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:10px;font-size:13px}
+  .file-list li:last-child{border-bottom:none}
+  .fl-icon{font-size:18px;flex:0 0 auto}
+  .fl-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+  .fl-type{font-size:10.5px;padding:2px 6px;border-radius:4px;flex:0 0 auto;font-weight:600}
+  .fl-type.received{background:var(--accent-soft);color:#b8d8f5}
+  .fl-type.sent{background:#2a4a34;color:#b5e8c8}
+  .file-list-empty{text-align:center;color:var(--text-mute);padding:30px 0;font-size:13px}
+
+  /* ===== 드래그 오버레이 (전체 화면) ===== */
+  .drag-overlay{position:fixed;inset:0;background:rgba(26,29,36,0.92);display:none;align-items:center;justify-content:center;z-index:300;flex-direction:column}
+  .drag-overlay.show{display:flex}
+  .drag-overlay .ov-box{border:2.5px dashed var(--accent);border-radius:18px;padding:50px 80px;text-align:center}
+  .drag-overlay .ov-icon{font-size:44px}
+  .drag-overlay .ov-text{font-size:16px;color:var(--text);margin-top:10px;font-weight:600}
+
+  ::-webkit-scrollbar{width:9px}::-webkit-scrollbar-thumb{background:#3a4150;border-radius:5px}::-webkit-scrollbar-thumb:hover{background:#4a5365}::-webkit-scrollbar-track{background:transparent}
+  .hidden-input{display:none}
+  .no-result{text-align:center;color:var(--text-mute);padding:30px 10px;font-size:12.5px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--toast-bg);color:#fff;padding:10px 22px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.5);opacity:0;transition:all .3s ease;z-index:400;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .db-status{font-size:10.5px;padding:2px 8px;border-radius:5px;display:inline-flex;align-items:center;gap:4px}
+  .db-status .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+  .db-status.ok .dot{background:#5cb85c}.db-status.ok{color:var(--text-mute)}
+
+  /* ===== 업로드 경고 배너 ===== */
+  .upload-info{font-size:11px;color:var(--text-mute);display:flex;align-items:center;gap:6px}
+  .upload-info b{color:var(--text-soft);font-weight:600}
+  .warning-banner{
+    flex:0 0 auto;
+    background:linear-gradient(90deg, #4a2a1a, #5c3320);
+    border-bottom:1px solid #7a4530;
+    color:#ffd9b3;
+    padding:9px 20px;
+    font-size:13px;
+    font-weight:500;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    animation: bannerPulse 2.5s ease-in-out infinite;
+  }
+  @keyframes bannerPulse {
+    0%, 100% { background:linear-gradient(90deg, #4a2a1a, #5c3320); }
+    50% { background:linear-gradient(90deg, #5c3320, #6e3d24); }
+  }
+  .warning-banner .wb-icon{font-size:15px}
+  .warning-banner b{color:#ffeacc}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1><span class="logo">T</span> TTalk 쪽지 뷰어 <span style="font-size:10px;font-weight:400;color:var(--text-mute);margin-left:4px">v1.3 · 2026.05.18</span></h1>
+    <div class="stats" id="stats"></div>
+    <span class="upload-info" id="uploadInfo"></span>
+    <span class="db-status" id="dbStatus"></span>
+    <div class="header-actions">
+      <button class="btn primary" id="addBtn">📥 쪽지 추가</button>
+      <button class="btn" id="histBtn">📋 업로드 내역</button>
+      <button class="btn" id="exportBtn">CSV 내보내기</button>
+      <button class="btn" id="meBtn">내 이름: 유재형</button>
+      <button class="btn danger" id="clearBtn">전체 삭제</button>
+    </div>
+  </header>
+  <div class="warning-banner" id="warningBanner" style="display:none"></div>
+  <div class="body-wrap">
+    <aside class="sidebar">
+      <div class="search-box">
+        <input type="text" id="search" placeholder="이름 · 내용 · 제목 검색…" autocomplete="off">
+        <div class="search-hint" id="searchHint"></div>
+      </div>
+      <div class="sb-section" id="kwSection">
+        <div class="sb-section-header">
+          <span class="sbh-title">🔖 저장한 검색어</span>
+          <span class="sbh-toggle" id="kwToggle">▼</span>
+        </div>
+        <div class="sb-section-body">
+          <div class="kw-list" id="kwList"></div>
+        </div>
+      </div>
+      <div class="sb-tabs">
+        <div class="sb-tab on" data-tab="convo" id="tabConvo">💬 대화 <span class="sbt-count" id="tabConvoCount">0</span></div>
+        <div class="sb-tab" data-tab="starred" id="tabStarred">⭐ 저장한 쪽지 <span class="sbt-count" id="tabStarredCount">0</span></div>
+      </div>
+      <div class="convo-list" id="convoList"></div>
+    </aside>
+    <div class="right-area" id="rightArea"></div>
+  </div>
+</div>
+
+<!-- 파일 추가 모달 -->
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>📥 쪽지 추가</h2>
+      <button class="modal-close" id="addModalClose">✕</button>
+    </div>
+    <div class="add-tabs">
+      <div class="add-tab on" data-addtab="file" id="addTabFile">📁 파일로 추가</div>
+      <div class="add-tab" data-addtab="paste" id="addTabPaste">📋 텍스트 붙여넣기</div>
+    </div>
+    <div class="modal-body">
+      <!-- 파일 탭 -->
+      <div class="add-pane" id="addPaneFile">
+        <div class="upload-zone" id="uploadZone">
+          <div class="uz-icon">📨</div>
+          <div class="uz-main">txt 파일을 여기에 끌어다 놓으세요</div>
+          <div class="uz-sub">받은쪽지함 / 보낸쪽지함 백업 파일 (여러 개 가능)</div>
+          <div class="uz-or">또는</div>
+          <div class="uz-btn" id="uzBrowse">파일 선택하기</div>
+        </div>
+      </div>
+      <!-- 텍스트 붙여넣기 탭 -->
+      <div class="add-pane" id="addPanePaste" style="display:none">
+        <div class="paste-guide">
+          파일 업로드가 제한된 환경에서는, TTalk에서 내려받은 txt 파일을 메모장 등으로 열어
+          전체 선택(<b>Ctrl+A</b>) &rarr; 복사(<b>Ctrl+C</b>) 후 아래에 붙여넣으세요.
+        </div>
+        <div class="paste-box-type">
+          <span>이 내용은</span>
+          <label class="ptype-radio"><input type="radio" name="pasteBox" value="received" checked> 📥 받은 쪽지</label>
+          <label class="ptype-radio"><input type="radio" name="pasteBox" value="sent"> 📤 보낸 쪽지</label>
+        </div>
+        <textarea id="pasteArea" class="paste-area" placeholder="여기에 쪽지 내용을 붙여넣으세요 (Ctrl+V)…"></textarea>
+        <div class="paste-actions">
+          <span class="paste-hint" id="pasteHint"></span>
+          <button class="paste-submit" id="pasteSubmit">쪽지 저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 업로드 내역 모달 -->
+<div class="modal-bg" id="histModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>📋 업로드 내역</h2>
+      <button class="modal-close" id="histModalClose">✕</button>
+    </div>
+    <div class="modal-body" id="histBody"></div>
+  </div>
+</div>
+
+<!-- 키워드 추가 모달 -->
+<div class="modal-bg" id="kwModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>🔖 검색어 저장</h2>
+      <button class="modal-close" id="kwModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12.5px;color:var(--text-soft);margin-bottom:8px">자주 검색하는 단어나 이름을 저장해두면, 사이드바에서 한 번의 클릭으로 검색할 수 있습니다.</div>
+      <div class="kw-input-row">
+        <input type="text" id="kwInput" placeholder="저장할 검색어 입력…" autocomplete="off">
+        <button id="kwAddSubmit">저장</button>
+      </div>
+      <div class="kw-modal-hint">
+        💡 <b>팁:</b> 사람 이름, 프로젝트명, 키워드 등 무엇이든 저장 가능합니다.<br>
+        검색 결과는 대화 상대 이름·제목·내용을 모두 매칭합니다.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 전체 화면 드래그 오버레이 -->
+<div class="drag-overlay" id="dragOverlay">
+  <div class="ov-box">
+    <div class="ov-icon">📨</div>
+    <div class="ov-text">여기에 놓으면 쪽지를 불러옵니다</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="fileInput" class="hidden-input" multiple accept=".txt">
+
+<script>
+"use strict";
+/* === IndexedDB === */
+const DB_NAME="TTalkViewer",DB_VER=2;let db=null;
+function openDB(){return new Promise((r,j)=>{const q=indexedDB.open(DB_NAME,DB_VER);q.onupgradeneeded=e=>{const d=e.target.result;["messages","files","settings","keywords"].forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n,{keyPath:n==="messages"?"_key":n==="files"?"name":n==="keywords"?"text":"k"})})};q.onsuccess=e=>{db=e.target.result;r(db)};q.onerror=e=>j(e.target.error)})}
+function dbP(s,o){return new Promise((r,j)=>{const t=db.transaction(s,"readwrite");t.objectStore(s).put(o);t.oncomplete=()=>r();t.onerror=e=>j(e.target.error)})}
+function dbPB(s,items){return new Promise((r,j)=>{const t=db.transaction(s,"readwrite");const st=t.objectStore(s);for(const i of items)st.put(i);t.oncomplete=()=>r();t.onerror=e=>j(e.target.error)})}
+function dbGA(s){return new Promise((r,j)=>{const t=db.transaction(s,"readonly");const q=t.objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=e=>j(e.target.error)})}
+function dbC(s){return new Promise((r,j)=>{const t=db.transaction(s,"readwrite");t.objectStore(s).clear();t.oncomplete=()=>r();t.onerror=e=>j(e.target.error)})}
+function dbGS(k){return new Promise((r,j)=>{const t=db.transaction("settings","readonly");const q=t.objectStore("settings").get(k);q.onsuccess=()=>r(q.result?q.result.v:undefined);q.onerror=e=>j(e.target.error)})}
+function dbSS(k,v){return dbP("settings",{k,v})}
+
+const S={myName:"유재형",messages:[],files:[],seen:new Set(),active:null,query:"",keywords:[],tab:"convo"};
+
+/* === Parser === */
+function isL(l){return/^-{40,}$/.test(l.trim())||/^={40,}끝\.$/.test(l.trim())}
+function isSh(l){return/^-{15,39}$/.test(l.trim())}
+function cl(t){return t.replace(/\r/g,"").replace(/^\s*\n+/,"").replace(/\n+\s*$/,"").trimEnd()}
+/* 이름에서 (사번) 제거: "유재형(02112801)" → "유재형" */
+function stripId(name){return(name||"").replace(/\(\d+\)/g,"").trim()}
+function dk(m){return[m.from,m.to,m.time,(m.body||"").trim().slice(0,200)].join("||")}
+function bx(fn){return/받은/.test(fn)?"received":/보낸/.test(fn)?"sent":"unknown"}
+
+function parseFile(fn,raw,forceBox){
+  const b=forceBox||bx(fn),lines=raw.replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n");
+  const blocks=[];let c=[];
+  for(const l of lines){if(isL(l)){if(c.length)blocks.push(c);c=[];}else c.push(l);}
+  if(c.length)blocks.push(c);
+  const out=[];for(const bl of blocks){const j=bl.join("\n");if(j.trim())parseBlock(j,b,fn,out);}return out;
+}
+function parseBlock(bt,b,fn,out){
+  const lines=bt.split("\n"),segs=[];let sg=[];
+  for(const l of lines){if(isSh(l)){segs.push(sg);sg=[];}else sg.push(l);}segs.push(sg);
+  const main=parseMain(segs[0]),qs=segs.slice(1);
+  if(main){let f,t;
+    if(b==="sent"){f=S.myName;t=main.recipient||fqs(qs)||"(수신자 정보 없음)";}
+    else if(b==="received"){f=main.sender;t=S.myName;}
+    else{f=main.sender;t=main.recipient||"(미상)";}
+    pm(out,{from:f,to:t,time:main.time,title:main.title,body:main.body,attach:main.attach,source:fn,origin:"main"});
+  }
+  for(const q of qs){const r=parseQ(q);if(r&&r.from&&r.time)pm(out,{from:r.from,to:r.to||"(미상)",time:r.time,title:"",body:r.body,attach:r.attach,source:fn,origin:"quote"});}
+}
+function parseMain(sg){
+  let se="",ti="",tl="",rc="",cc="",bodyStart=-1;
+  for(let i=0;i<sg.length;i++){const l=sg[i];let m;
+    if((m=l.match(/^송신\s*:\s*(.*)$/))){se=stripId(m[1]);continue;}
+    if((m=l.match(/^수신\s*:\s*(.*)$/))){rc=m[1].split(",").map(s=>stripId(s)).filter(s=>s).join(",");continue;}
+    if((m=l.match(/^참조\s*:\s*(.*)$/))){cc=m[1].split(",").map(s=>stripId(s)).filter(s=>s).join(",");continue;}
+    if((m=l.match(/^시간\s*:\s*(.*)$/))){ti=m[1].trim();continue;}
+    if((m=l.match(/^제목\s*:\s*(.*)$/))){tl=m[1].trim();continue;}
+    if((m=l.match(/^내용\s*:\s*(.*)$/))){
+      const il=m[1],rest=sg.slice(i+1).join("\n");
+      let bd=il?(il+(rest?"\n"+rest:"")):rest;
+      const ax=exA(bd);return{sender:se,recipient:rc,cc:cc,time:ti,title:tl,body:cl(ax.body),attach:ax.attach};
+    }
+    // 내용: 라벨이 없는 포맷 — 제목까지 파싱 후 나머지가 본문
+    if(se&&ti&&tl&&bodyStart<0){bodyStart=i;break;}
+  }
+  if(!se&&!ti)return null;
+  // 내용: 라벨이 없었으면 bodyStart 이후가 본문
+  if(bodyStart>=0){
+    const rest=sg.slice(bodyStart).join("\n");
+    const ax=exA(rest);return{sender:se,recipient:rc,cc:cc,time:ti,title:tl,body:cl(ax.body),attach:ax.attach};
+  }
+  return{sender:se,recipient:rc,cc:cc,time:ti,title:tl,body:"",attach:""};
+}
+function parseQ(sg){
+  let f="",t="",ti="",bl=[],hd=false;
+  for(let i=0;i<sg.length;i++){const l=sg[i];let m;
+    if(!hd){if((m=l.match(/^발신자\s*:\s*(.*)$/))){f=stripId(m[1]);continue;}if((m=l.match(/^수신자\s*:\s*(.*)$/))){t=stripId(m[1]);continue;}if(l.match(/^참조자\s*:/))continue;if((m=l.match(/^날\s*짜\s*:\s*(.*)$/))){ti=m[1].trim();hd=true;continue;}if(!l.trim())continue;if(f||ti){hd=true;bl.push(l);continue;}continue;}else bl.push(l);}
+  if(!f&&!ti)return null;const ax=exA(bl.join("\n"));return{from:f,to:t,time:ti,body:cl(ax.body),attach:ax.attach};
+}
+function exA(bd){const ls=bd.split("\n");let at="";const k=[];for(const l of ls){const m=l.match(/^첨부파일\s*:\s*(.*)$/);if(m)at=m[1].trim();else k.push(l);}return{body:k.join("\n"),attach:at}}
+function fqs(qs){for(const s of qs){const q=parseQ(s);if(q&&q.from)return q.from;}return null}
+function pm(out,m){if(!m.time)return;if(!(m.body&&m.body.trim())&&!(m.title&&m.title.trim())&&!m.attach)return;out.push(m)}
+
+async function ingest(fn,raw){
+  const b=bx(fn),now=Date.now();
+  const existing=S.files.find(f=>f.name===fn);
+  if(existing){existing.uploadedAt=now;if(db)await dbP("files",{name:fn,box:b,uploadedAt:now})}
+  else{S.files.push({name:fn,box:b,uploadedAt:now});if(db)await dbP("files",{name:fn,box:b,uploadedAt:now})}
+  const p=parseFile(fn,raw),nw=[];
+  for(const m of p){const k=dk(m);if(S.seen.has(k))continue;S.seen.add(k);m._key=k;S.messages.push(m);nw.push(m);}
+  if(nw.length&&db)await dbPB("messages",nw);return nw.length;
+}
+
+/* 텍스트 직접 붙여넣기 처리 (파일 업로드 차단 환경 대응) */
+async function ingestText(raw,box){
+  const now=Date.now();
+  // 붙여넣기 식별자: 중복 방지를 위해 시각 포함
+  const stamp=new Date(now).toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+  const label=(box==="received"?"받은쪽지":"보낸쪽지");
+  const fn="📋 붙여넣기 ("+label+") "+stamp;
+  S.files.push({name:fn,box:box,uploadedAt:now,pasted:true});
+  if(db)await dbP("files",{name:fn,box:box,uploadedAt:now,pasted:true});
+  const p=parseFile(fn,raw,box),nw=[];
+  for(const m of p){const k=dk(m);if(S.seen.has(k))continue;S.seen.add(k);m._key=k;S.messages.push(m);nw.push(m);}
+  if(nw.length&&db)await dbPB("messages",nw);return nw.length;
+}
+async function loadDB(){const ms=await dbGA("messages"),fs=await dbGA("files"),mn=await dbGS("myName"),kw=await dbGA("keywords");if(mn)S.myName=mn;S.files=fs||[];S.messages=ms||[];S.seen=new Set(S.messages.map(m=>m._key));S.keywords=(kw||[]).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)).map(k=>k.text)}
+async function clearDB(){
+  if(db){
+    await new Promise((r,j)=>{const t=db.transaction(["messages","files","keywords"],"readwrite");t.objectStore("messages").clear();t.objectStore("files").clear();t.objectStore("keywords").clear();t.oncomplete=()=>r();t.onerror=e=>j(e.target.error)});
+  }
+  S.messages=[];S.files=[];S.seen=new Set();S.active=null;S.keywords=[];
+}
+
+/* 별표 토글 */
+async function toggleStar(key){
+  const m=S.messages.find(x=>x._key===key);
+  if(!m)return;
+  m.starred=!m.starred;
+  if(db)await dbP("messages",m);
+}
+
+/* 키워드 CRUD */
+async function addKeyword(text){
+  const t=(text||"").trim();
+  if(!t)return false;
+  if(S.keywords.includes(t))return false;
+  S.keywords.push(t);
+  if(db)await dbP("keywords",{text:t,createdAt:Date.now()});
+  return true;
+}
+async function removeKeyword(text){
+  S.keywords=S.keywords.filter(k=>k!==text);
+  if(db)await new Promise((r,j)=>{const t=db.transaction("keywords","readwrite");t.objectStore("keywords").delete(text);t.oncomplete=()=>r();t.onerror=e=>j(e.target.error)});
+}
+
+function buildC(){
+  const map=new Map();
+  for(const m of S.messages){
+    let partner;
+    const mf=m.from===S.myName;
+    // to가 쉼표 구분 복수일 수 있음
+    const toList=(m.to||"").split(",").map(s=>s.trim()).filter(Boolean);
+    const mt=toList.includes(S.myName)||m.to===S.myName;
+    
+    if(mf&&/^\(수신자/.test(m.to)) partner="📝 메모";
+    else if(mf&&mt&&toList.length<=1) partner=S.myName+" (나에게)";
+    else if(mf&&!mt) {
+      // 내가 보냈고 수신자에 내가 없음 → 수신자 중 첫 번째가 대화 상대
+      partner=toList[0]||"(수신자 정보 없음)";
+    } else if(mf&&mt) {
+      // 내가 보냈고 수신자에 내가 포함 → 나 제외한 수신자
+      const others=toList.filter(n=>n!==S.myName);
+      partner=others[0]||S.myName+" (나에게)";
+    } else if(mt&&!mf) {
+      // 상대가 보냈고 내가 수신 → 발신자가 대화 상대
+      partner=m.from;
+    } else {
+      // 둘 다 해당 안 됨 (참조로 받은 쪽지 등)
+      partner=m.from;
+    }
+    if(!map.has(partner)) map.set(partner,[]);
+    map.get(partner).push(m);
+  }
+  const cs=[];for(const[n,ms]of map){ms.sort((a,b)=>a.time.localeCompare(b.time));cs.push({name:n,msgs:ms,last:ms[ms.length-1]});}
+  cs.sort((a,b)=>b.last.time.localeCompare(a.last.time));return cs;
+}
+
+/* === Render === */
+const $=id=>document.getElementById(id);
+const COLS=["#5b9bd5","#d98b5f","#7fa86b","#b07cc6","#c97f9a","#5fb0b0","#c2a35a","#8a8fd0"];
+function ac(n){let h=0;for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))&0xffffffff;return COLS[Math.abs(h)%COLS.length]}
+function ini(n){const s=n.replace(/[\(📝].*/g,"").trim();return s?s.slice(-2):"?"}
+function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function hl(s){const q=S.query.trim();let h=esc(s);if(q){h=h.replace(new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>")}return h}
+function fd(t){return(t||"").slice(0,10)}function ft(t){return(t||"").slice(11,16)}
+function fsh(t){const d=fd(t),td=new Date().toISOString().slice(0,10);return d===td?ft(t):d.slice(5).replace("-",".")}
+function mqF(m){const q=S.query.trim().toLowerCase();return!q||(m.from+" "+m.to+" "+m.title+" "+m.body+" "+(m.attach||"")).toLowerCase().includes(q)}
+function gfc(){
+  const all=buildC(),q=S.query.trim(),r=[];
+  for(const c of all){if(q&&!c.name.toLowerCase().includes(q.toLowerCase())&&!c.msgs.some(mqF))continue;
+    const fm=q?c.msgs:c.msgs; // 전체전용이므로 필터 없음
+    r.push({name:c.name,msgs:fm,last:fm[fm.length-1]})}return r;
+}
+function toast(m,d){const e=$("toast");e.textContent=m;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),d||2500)}
+function dbSt(ok,t){const e=$("dbStatus");e.className="db-status "+(ok?"ok":"err");e.innerHTML='<span class="dot"></span>'+esc(t)}
+
+function renderSidebar(){
+  // 키워드 칩 렌더링
+  renderKeywords();
+  // 탭별 카운트
+  const convos=gfc();
+  const starredMsgs=S.messages.filter(m=>m.starred);
+  $("tabConvoCount").textContent=convos.length;
+  $("tabStarredCount").textContent=starredMsgs.length;
+  $("tabConvo").classList.toggle("on",S.tab==="convo");
+  $("tabStarred").classList.toggle("on",S.tab==="starred");
+  
+  const el=$("convoList");el.innerHTML="";
+  const hint=$("searchHint");
+  if(S.query.trim()){
+    let h=0;convos.forEach(c=>c.msgs.forEach(m=>{if(mqF(m))h++}));
+    hint.textContent="쪽지 "+h+"건 · 대화 "+convos.length+"건";
+  } else hint.textContent="";
+
+  if(S.tab==="starred"){
+    // 별표 탭: 검색어가 있으면 필터 적용
+    const filtered=S.query.trim()?starredMsgs.filter(mqF):starredMsgs;
+    const sorted=[...filtered].sort((a,b)=>b.time.localeCompare(a.time));
+    if(!sorted.length){el.innerHTML='<div class="no-result">'+(S.query.trim()?'검색 결과 없음':'저장한 쪽지가 없습니다.<br><br><span style="font-size:11px;opacity:.7">쪽지 위에 마우스를 올리면 ⭐ 버튼이 나타납니다.</span>')+'</div>';return}
+    for(const m of sorted){
+      const d=document.createElement("div");
+      d.className="convo-item";
+      const otherName=m.from===S.myName?(m.to||"").split(",")[0]:m.from;
+      const pv=(m.title&&m.origin==="main")?m.title:(m.body||m.attach||"");
+      d.innerHTML='<div class="avatar" style="background:'+ac(otherName)+'">'+esc(ini(otherName))+'</div>'
+        +'<div class="ci-main"><div class="ci-top"><span class="ci-name">⭐ '+hl(otherName)+'</span><span class="ci-time">'+fsh(m.time)+'</span></div>'
+        +'<div class="ci-preview">'+hl(pv.replace(/\n/g," "))+'</div></div>';
+      d.onclick=()=>{
+        // 클릭하면 해당 대화로 이동 + 메시지로 스크롤
+        S.tab="convo";S.active=null;
+        // 그룹핑된 대화 이름 찾기
+        const partner=findPartnerOf(m);
+        if(partner)S.active=partner;
+        S._scrollToKey=m._key;
+        render();
+      };
+      el.appendChild(d);
+    }
+    return;
+  }
+
+  // 일반 대화 탭
+  if(!convos.length){el.innerHTML='<div class="no-result">표시할 대화가 없습니다.</div>';return}
+  if(!convos.find(c=>c.name===S.active))S.active=convos[0].name;
+  for(const c of convos){const d=document.createElement("div");d.className="convo-item"+(c.name===S.active?" active":"");
+    const l=c.last,pv=(l.title&&l.origin==="main")?l.title:(l.body||l.attach||"");
+    d.innerHTML='<div class="avatar" style="background:'+ac(c.name)+'">'+esc(ini(c.name))+'</div>'
+      +'<div class="ci-main"><div class="ci-top"><span class="ci-name">'+hl(c.name)+'</span><span class="ci-time">'+fsh(l.time)+'</span></div>'
+      +'<div class="ci-preview">'+hl(pv.replace(/\n/g," "))+'</div></div>'
+      +'<span class="ci-count">'+c.msgs.length+'</span>';
+    d.onclick=()=>{S.active=c.name;render()};el.appendChild(d)}
+}
+
+/* 메시지가 속한 대화 파트너 이름 찾기 (buildC의 그룹핑과 동일 로직) */
+function findPartnerOf(m){
+  const mf=m.from===S.myName;
+  const toList=(m.to||"").split(",").map(s=>s.trim()).filter(Boolean);
+  const mt=toList.includes(S.myName)||m.to===S.myName;
+  if(mf&&/^\(수신자/.test(m.to))return"📝 메모";
+  if(mf&&mt&&toList.length<=1)return S.myName+" (나에게)";
+  if(mf&&!mt)return toList[0]||"(수신자 정보 없음)";
+  if(mf&&mt){const others=toList.filter(n=>n!==S.myName);return others[0]||S.myName+" (나에게)"}
+  if(mt&&!mf)return m.from;
+  return m.from;
+}
+
+/* 저장된 키워드 칩 렌더링 */
+function renderKeywords(){
+  const el=$("kwList");
+  let h='';
+  for(const kw of S.keywords){
+    const active=S.query.trim()===kw?'active':'';
+    h+='<span class="kw-chip '+active+'" data-kw="'+esc(kw)+'"><span class="kw-text">'+esc(kw)+'</span><span class="kw-del" data-del="'+esc(kw)+'" title="삭제">×</span></span>';
+  }
+  h+='<button class="kw-add-btn" id="kwAddBtn">+ 추가</button>';
+  el.innerHTML=h;
+  // 이벤트 바인딩
+  el.querySelectorAll(".kw-chip").forEach(chip=>{
+    chip.onclick=e=>{
+      if(e.target.classList.contains("kw-del")){
+        e.stopPropagation();
+        const txt=e.target.dataset.del;
+        removeKeyword(txt).then(()=>{
+          if(S.query.trim()===txt){S.query="";$("search").value="";}
+          render();
+        });
+        return;
+      }
+      const kw=chip.dataset.kw;
+      S.query=kw;$("search").value=kw;S.active=null;render();
+    };
+  });
+  $("kwAddBtn").onclick=()=>{
+    const cur=$("search").value.trim();
+    $("kwInput").value=cur;
+    openModal("kwModal");
+    setTimeout(()=>$("kwInput").focus(),50);
+  };
+}
+
+function renderRight(){
+  const ra=$("rightArea"),cs=gfc(),c=cs.find(x=>x.name===S.active);
+  if(!c){ra.innerHTML='<div class="empty-state"><div class="big">대화를 선택하세요</div><div class="sm">왼쪽 목록에서 대화 상대를 클릭하세요.</div></div>';return}
+  let h='<div class="chat-header"><div class="avatar" style="background:'+ac(c.name)+'">'+esc(ini(c.name))+'</div><div><div class="ch-name">'+esc(c.name)+'</div><div class="ch-sub">쪽지 '+c.msgs.length+'건 · '+fd(c.msgs[0].time)+' ~ '+fd(c.last.time)+'</div></div></div><div class="chat-scroll" id="chatScroll">';
+  let ld="";
+  for(const m of c.msgs){const day=fd(m.time);if(day!==ld){h+='<div class="day-divider">'+day+'</div>';ld=day}
+    const me=m.from===S.myName,cls=me?"me":"them";let inner="";
+    if(!me)inner+='<span class="b-title">'+esc(m.from)+'</span>';
+    if(m.title&&m.origin==="main"&&m.title.trim()&&m.title.trim()!==(m.body||"").trim())inner+='<div style="font-weight:600;font-size:12.5px;opacity:.9;margin-bottom:2px">'+hl(m.title)+'</div>';
+    inner+='<div class="b-body">'+hl(m.body||"(내용 없음)")+'</div>';
+    if(m.attach)inner+='<div class="b-attach">📎 '+hl(m.attach)+'</div>';
+    inner+='<div class="b-meta"><span>'+ft(m.time)+'</span>'+(m.origin==="quote"?'<span class="src-tag">인용복원</span>':'')+'<span class="src-tag">'+esc(m.to)+' 수신</span></div>';
+    const starOn=m.starred?"on":"";
+    const starIcon=m.starred?"★":"☆";
+    inner+='<button class="star-btn '+starOn+'" data-star="'+esc(m._key)+'" title="'+(m.starred?'별표 해제':'별표')+'">'+starIcon+'</button>';
+    h+='<div class="msg-row '+cls+'" data-mkey="'+esc(m._key)+'"><div class="bubble">'+inner+'</div></div>'}
+  h+='</div>';ra.innerHTML=h;
+  // 별표 버튼 이벤트
+  ra.querySelectorAll(".star-btn").forEach(btn=>{
+    btn.onclick=async e=>{
+      e.stopPropagation();
+      const key=btn.dataset.star;
+      await toggleStar(key);
+      render();
+    };
+  });
+  const sc=$("chatScroll");
+  if(sc){
+    // 별표 탭에서 클릭으로 이동했으면 그 메시지로 스크롤
+    if(S._scrollToKey){
+      const target=ra.querySelector('[data-mkey="'+CSS.escape(S._scrollToKey)+'"]');
+      if(target){
+        target.scrollIntoView({block:"center"});
+        // 잠깐 강조
+        target.style.transition="background .4s";
+        target.style.background="rgba(240,198,116,0.15)";
+        setTimeout(()=>{target.style.background="";},1500);
+      }
+      S._scrollToKey=null;
+    } else if(S.query.trim()){
+      const mk=sc.querySelector("mark");
+      if(mk)mk.scrollIntoView({block:"center"});
+      else sc.scrollTop=sc.scrollHeight;
+    } else sc.scrollTop=sc.scrollHeight;
+  }
+}
+
+function renderUploadInfo(){
+  const wb=$("warningBanner"),ui=$("uploadInfo");
+  if(!S.files.length){wb.style.display="none";ui.textContent="";return}
+  // 가장 최근 업로드 시각 (uploadedAt 없는 레거시 파일은 무시)
+  const times=S.files.map(f=>f.uploadedAt).filter(t=>t);
+  if(!times.length){wb.style.display="none";ui.textContent="";return}
+  const latest=Math.max(...times);
+  const days=Math.floor((Date.now()-latest)/(1000*60*60*24));
+  const dateStr=new Date(latest).toLocaleDateString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit"});
+  ui.innerHTML='<span>최근 업로드: <b>'+dateStr+'</b> ('+(days===0?'오늘':days+'일 전')+')</span>';
+  if(days>=20){
+    wb.style.display="flex";
+    wb.innerHTML='<span class="wb-icon">⚠️</span><span>파일을 업로드한지 <b>'+days+'일</b>이 지났습니다. 백업 파일을 업로드해주세요.</span>';
+  } else {
+    wb.style.display="none";
+  }
+}
+
+function render(){
+  const ra=$("rightArea");
+  renderUploadInfo();
+  renderKeywords();
+  if(!S.messages.length){
+    ra.innerHTML='<div class="empty-state"><div class="big">불러온 쪽지가 없습니다</div><div class="sm">상단의 <b>📥 쪽지 추가</b> 버튼을 클릭해<br>txt 파일을 올리거나 텍스트를 붙여넣으세요.<br>txt 파일은 화면에 직접 끌어다 놓아도 됩니다.<br><br>💾 <b>데이터는 브라우저에 영구 저장됩니다.</b></div></div>';
+    $("stats").innerHTML="";$("convoList").innerHTML="";
+    $("tabConvoCount").textContent=0;$("tabStarredCount").textContent=0;
+    return}
+  const t=S.messages.length,se=S.messages.filter(m=>m.from===S.myName).length,re=S.messages.filter(m=>(m.to||"").split(",").map(s=>s.trim()).includes(S.myName)&&m.from!==S.myName).length;
+  $("stats").innerHTML='<span>총 <b>'+t+'</b>건</span><span>보냄 <b>'+se+'</b></span><span>받음 <b>'+re+'</b></span><span>대화 <b>'+buildC().length+'</b></span><span>파일 <b>'+S.files.length+'</b></span>';
+  renderSidebar();renderRight();
+}
+
+/* === File loading === */
+function readT(f){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result);rd.onerror=()=>j(new Error("실패"));rd.readAsText(f,"UTF-8")})}
+async function readFiles(fl){
+  const a=Array.from(fl).filter(f=>/\.txt$/i.test(f.name));if(!a.length){alert("txt 파일만 가능합니다.");return}
+  let tot=0;for(const f of a){tot+=await ingest(f.name,await readT(f))}
+  render();toast("✅ 파일 "+a.length+"개 · 신규 "+tot+"건 저장됨");dbSt(true,"IndexedDB ("+S.messages.length+"건)");
+}
+
+/* === 모달 제어 === */
+function openModal(id){$(id).classList.add("show")}
+function closeModal(id){$(id).classList.remove("show")}
+
+/* 파일 추가 모달 */
+$("addBtn").onclick=()=>openModal("addModal");
+$("addModalClose").onclick=()=>closeModal("addModal");
+$("addModal").onclick=e=>{if(e.target===$("addModal"))closeModal("addModal")};
+
+/* 모달 내 탭 전환 (파일 / 붙여넣기) */
+document.querySelectorAll(".add-tab").forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll(".add-tab").forEach(x=>x.classList.remove("on"));
+    t.classList.add("on");
+    const tab=t.dataset.addtab;
+    $("addPaneFile").style.display=(tab==="file")?"":"none";
+    $("addPanePaste").style.display=(tab==="paste")?"":"none";
+    if(tab==="paste")setTimeout(()=>$("pasteArea").focus(),50);
+  };
+});
+
+const uz=$("uploadZone"),fi=$("fileInput");
+$("uzBrowse").onclick=e=>{e.stopPropagation();fi.click()};
+uz.onclick=()=>fi.click();
+fi.onchange=e=>{readFiles(e.target.files);fi.value="";closeModal("addModal")};
+
+// 모달 내부 드래그앤드롭
+let uzDrag=0;
+uz.addEventListener("dragenter",e=>{e.preventDefault();e.stopPropagation();uzDrag++;uz.classList.add("drag")});
+uz.addEventListener("dragover",e=>{e.preventDefault();e.stopPropagation()});
+uz.addEventListener("dragleave",e=>{e.preventDefault();e.stopPropagation();uzDrag--;if(uzDrag<=0){uz.classList.remove("drag");uzDrag=0}});
+uz.addEventListener("drop",e=>{e.preventDefault();e.stopPropagation();uzDrag=0;uz.classList.remove("drag");if(e.dataTransfer&&e.dataTransfer.files.length){readFiles(e.dataTransfer.files);closeModal("addModal")}});
+
+/* 텍스트 붙여넣기 저장 */
+$("pasteArea").addEventListener("input",()=>{
+  const len=$("pasteArea").value.length;
+  $("pasteHint").textContent=len?(len.toLocaleString()+"자 입력됨"):"";
+});
+$("pasteSubmit").onclick=async()=>{
+  const raw=$("pasteArea").value;
+  if(!raw.trim()){toast("붙여넣은 내용이 없습니다");return}
+  const box=document.querySelector('input[name="pasteBox"]:checked').value;
+  const added=await ingestText(raw,box);
+  $("pasteArea").value="";$("pasteHint").textContent="";
+  closeModal("addModal");
+  render();
+  if(added>0){toast("✅ 텍스트에서 신규 쪽지 "+added+"건 저장됨")}
+  else{toast("⚠️ 새로 추가된 쪽지가 없습니다 (중복이거나 형식 불일치)",3500)}
+  dbSt(true,"IndexedDB ("+S.messages.length+"건)");
+};
+
+/* 업로드 내역 모달 */
+$("histBtn").onclick=()=>{renderHistModal();openModal("histModal")};
+$("histModalClose").onclick=()=>closeModal("histModal");
+$("histModal").onclick=e=>{if(e.target===$("histModal"))closeModal("histModal")};
+
+function renderHistModal(){
+  const body=$("histBody");
+  if(!S.files.length){body.innerHTML='<div class="file-list-empty">추가된 쪽지가 없습니다.</div>';return}
+  let h='<ul class="file-list">';
+  for(const f of S.files){
+    const isR=f.box==="received";
+    const icon=f.pasted?'📋':(isR?'📥':'📤');
+    h+='<li><span class="fl-icon">'+icon+'</span><span class="fl-name">'+esc(f.name)+'</span><span class="fl-type '+(isR?'received':'sent')+'">'+(isR?'받은쪽지':'보낸쪽지')+'</span></li>';
+  }
+  h+='</ul>';
+  h+='<div style="margin-top:16px;font-size:11.5px;color:var(--text-mute);text-align:center">총 '+S.files.length+'건 · 쪽지 '+S.messages.length+'건 저장됨</div>';
+  body.innerHTML=h;
+}
+
+/* === 전체 화면 드래그앤드롭 (모달 밖에서도 동작) === */
+const dov=$("dragOverlay");
+let dd=0;
+window.addEventListener("dragenter",e=>{e.preventDefault();dd++;if(!$("addModal").classList.contains("show"))dov.classList.add("show")});
+window.addEventListener("dragover",e=>{e.preventDefault()});
+window.addEventListener("dragleave",e=>{e.preventDefault();dd--;if(dd<=0){dov.classList.remove("show");dd=0}});
+window.addEventListener("drop",e=>{e.preventDefault();dd=0;dov.classList.remove("show");if(!$("addModal").classList.contains("show")&&e.dataTransfer&&e.dataTransfer.files.length)readFiles(e.dataTransfer.files)});
+
+/* === 기타 이벤트 === */
+let st=null;$("search").addEventListener("input",e=>{clearTimeout(st);st=setTimeout(()=>{S.query=e.target.value;if(S.messages.length)render()},160)});
+
+/* 사이드바 탭 */
+document.querySelectorAll(".sb-tab").forEach(t=>{
+  t.onclick=()=>{S.tab=t.dataset.tab;render()};
+});
+
+/* 키워드 섹션 접기/펴기 */
+$("kwToggle").onclick=()=>{
+  const sec=$("kwSection");
+  sec.classList.toggle("collapsed");
+  $("kwToggle").textContent=sec.classList.contains("collapsed")?"▶":"▼";
+};
+
+/* 키워드 모달 */
+$("kwModalClose").onclick=()=>closeModal("kwModal");
+$("kwModal").onclick=e=>{if(e.target===$("kwModal"))closeModal("kwModal")};
+$("kwAddSubmit").onclick=async()=>{
+  const v=$("kwInput").value.trim();
+  if(!v){toast("검색어를 입력하세요");return}
+  const added=await addKeyword(v);
+  if(!added){toast("이미 저장된 검색어입니다");return}
+  closeModal("kwModal");
+  toast('🔖 "'+v+'" 저장됨');
+  render();
+};
+$("kwInput").addEventListener("keydown",e=>{if(e.key==="Enter")$("kwAddSubmit").click()});
+
+$("meBtn").onclick=async()=>{const v=prompt("'나'로 인식할 이름:",S.myName);if(v&&v.trim()){S.myName=v.trim();$("meBtn").textContent="내 이름: "+S.myName;if(db)await dbSS("myName",S.myName);S.active=null;if(S.messages.length)render();toast('이름 변경: '+S.myName)}};
+$("clearBtn").onclick=async()=>{
+  if(!S.messages.length&&!S.files.length&&!S.keywords.length)return;
+  if(!confirm("저장된 쪽지 "+S.messages.length+"건, 업로드 내역 "+S.files.length+"건, 저장된 검색어 "+S.keywords.length+"개를 모두 삭제합니다.\n별표 정보도 함께 사라집니다. 되돌릴 수 없습니다."))return;
+  await clearDB();render();toast("🗑️ 전체 삭제 완료");dbSt(true,"비어있음");
+};
+$("exportBtn").onclick=()=>{if(!S.messages.length)return;const cs=gfc(),rows=[["대화상대","발신자","수신자","시각","제목","내용","첨부","구분"]];for(const c of cs)for(const m of c.msgs){if(S.query.trim()&&!mqF(m))continue;rows.push([c.name,m.from,m.to,m.time,m.title||"",(m.body||"").replace(/\n/g," "),m.attach||"",m.origin==="quote"?"인용복원":"원본"])}const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(",")).join("\r\n");const bl=new Blob(["\uFEFF"+csv],{type:"text/csv"});const u=URL.createObjectURL(bl);const a=document.createElement("a");a.href=u;a.download="ttalk_"+new Date().toISOString().slice(0,10)+".csv";a.click();URL.revokeObjectURL(u)};
+window.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==="f"){e.preventDefault();$("search").focus();$("search").select()}
+  if(e.key==="Escape"){closeModal("addModal");closeModal("histModal")}
+});
+
+/* === Init === */
+(async()=>{
+  try{await openDB();await loadDB();$("meBtn").textContent="내 이름: "+S.myName;dbSt(true,S.messages.length?"IndexedDB ("+S.messages.length+"건)":"준비됨");render();if(S.messages.length)toast("💾 "+S.messages.length+"건 불러옴")}
+  catch(e){console.error(e);dbSt(false,"IndexedDB 불가");render()}
+})();
+</script>
+</body>
+</html>
