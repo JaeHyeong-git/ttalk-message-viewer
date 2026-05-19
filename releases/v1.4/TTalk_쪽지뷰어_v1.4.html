@@ -34,9 +34,10 @@
   header{flex:0 0 auto;padding:14px 20px;background:var(--bg-panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   header h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
   header h1 .logo{width:22px;height:22px;background:var(--accent);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:800}
-  .stats{font-size:12px;color:var(--text-mute);display:flex;gap:14px}.stats b{color:var(--text-soft);font-weight:600}
+  .stats{font-size:12px;color:var(--text-mute);display:flex;gap:14px;flex-wrap:wrap}.stats b{color:var(--text-soft);font-weight:600}
+  .stats>span{white-space:nowrap}
   .header-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-  button.btn{background:var(--bg-panel-2);color:var(--text-soft);border:1px solid var(--line);border-radius:7px;padding:7px 13px;font-size:12px;font-family:inherit;cursor:pointer;transition:all .15s}
+  button.btn{background:var(--bg-panel-2);color:var(--text-soft);border:1px solid var(--line);border-radius:7px;padding:7px 13px;font-size:12px;font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap;flex:0 0 auto}
   button.btn:hover{background:var(--bg-hover);color:var(--text)}
   button.btn.primary{background:var(--accent-soft);border-color:var(--accent);color:#dcebfb}
   button.btn.primary:hover{background:var(--accent);color:#fff}
@@ -67,6 +68,14 @@
   .chat-header .avatar{width:32px;height:32px;min-width:32px;font-size:13px}
   .chat-header .ch-name{font-weight:700;font-size:14.5px}
   .chat-header .ch-sub{font-size:11.5px;color:var(--text-mute);margin-top:1px}
+  .ch-hide-btn{
+    margin-left:auto;flex:0 0 auto;
+    background:var(--bg-panel-2);border:1px solid var(--line);color:var(--text-soft);
+    border-radius:7px;padding:6px 12px;font-size:11.5px;cursor:pointer;
+    font-family:inherit;white-space:nowrap;transition:all .12s;
+    display:flex;align-items:center;gap:5px;
+  }
+  .ch-hide-btn:hover{background:#4a3520;border-color:#7a5a30;color:#ffd9a0}
   .chat-scroll{flex:1 1 auto;overflow-y:auto;padding:22px 28px 30px;display:flex;flex-direction:column;gap:3px}
   .day-divider{align-self:center;background:var(--bg-panel-2);color:var(--text-mute);font-size:11px;padding:3px 12px;border-radius:10px;margin:14px 0 10px}
   .msg-row{display:flex;margin-top:9px}.msg-row.me{justify-content:flex-end}.msg-row.them{justify-content:flex-start}
@@ -169,10 +178,15 @@
     background:var(--bg-panel);display:flex;align-items:center;
     justify-content:space-between;gap:8px;
   }
-  .hidden-bar .hb-label{font-size:11px;color:var(--text-mute)}
+  .hidden-bar .hb-label{
+    font-size:11px;color:var(--text-mute);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    flex:1 1 auto;min-width:0;
+  }
   .hidden-bar button{
     background:var(--bg-panel-2);border:1px solid #a04040;color:#e08080;
     border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;
+    white-space:nowrap;flex:0 0 auto;
   }
   .hidden-bar button:hover{background:#5c2020;color:#ffb0b0}
   .hidden-bar button:disabled{opacity:.4;cursor:not-allowed}
@@ -378,7 +392,7 @@
         <div class="sb-tab" data-tab="hidden" id="tabHidden">🗂️ 숨김 <span class="sbt-count" id="tabHiddenCount">0</span></div>
       </div>
       <div class="hidden-bar" id="hiddenBar" style="display:none">
-        <span class="hb-label">숨긴 쪽지는 대화·검색에서 제외됩니다</span>
+        <span class="hb-label">대화·검색에서 제외된 쪽지</span>
         <button id="hiddenClearBtn">전체 삭제</button>
       </div>
       <div class="convo-list" id="convoList"></div>
@@ -594,6 +608,15 @@ async function toggleHide(key){
   if(!m)return;
   m.hidden=!m.hidden;
   if(db)await dbP("messages",m);
+}
+
+/* 특정 발신자가 보낸 쪽지 전체 숨김 */
+async function hideAllFromSender(senderName){
+  const targets=S.messages.filter(m=>m.from===senderName&&!m.hidden);
+  if(!targets.length)return 0;
+  for(const m of targets)m.hidden=true;
+  if(db)await dbPB("messages",targets);
+  return targets.length;
 }
 
 /* 숨긴 쪽지 영구 삭제 (전체) */
@@ -826,7 +849,10 @@ function renderRight(){
   else if(S.searchIdx<0)S.searchIdx=0;
   const currentMatchKey=matchKeys.length?matchKeys[S.searchIdx]:null;
 
-  let h='<div class="chat-header"><div class="avatar" style="background:'+ac(c.name)+'">'+esc(ini(c.name))+'</div><div><div class="ch-name">'+esc(c.name)+'</div><div class="ch-sub">쪽지 '+c.msgs.length+'건 · '+fd(c.msgs[0].time)+' ~ '+fd(c.last.time)+'</div></div></div><div class="chat-scroll" id="chatScroll">';
+  // 발신자 전체 숨김 버튼: 일반 대화 상대(특수 그룹 제외)일 때만 표시
+  const isSpecial=/^📝|\(나에게\)|↔/.test(c.name);
+  const senderHideBtn=isSpecial?'':'<button class="ch-hide-btn" id="chHideBtn" data-sender="'+esc(c.name)+'" title="'+esc(c.name)+'님의 모든 쪽지 숨기기">🗂️ 발신자 전체 숨기기</button>';
+  let h='<div class="chat-header"><div class="avatar" style="background:'+ac(c.name)+'">'+esc(ini(c.name))+'</div><div><div class="ch-name">'+esc(c.name)+'</div><div class="ch-sub">쪽지 '+c.msgs.length+'건 · '+fd(c.msgs[0].time)+' ~ '+fd(c.last.time)+'</div></div>'+senderHideBtn+'</div><div class="chat-scroll" id="chatScroll">';
   let ld="";
   for(const m of c.msgs){const day=fd(m.time);if(day!==ld){h+='<div class="day-divider">'+day+'</div>';ld=day}
     const me=m.from===S.myName,cls=me?"me":"them";let inner="";
@@ -876,6 +902,20 @@ function renderRight(){
       toast("쪽지를 숨겼습니다 · 숨김 탭에서 확인 가능");
     };
   });
+  // 발신자 전체 숨기기 버튼 이벤트
+  const chHideBtn=$("chHideBtn");
+  if(chHideBtn){
+    chHideBtn.onclick=async()=>{
+      const sender=chHideBtn.dataset.sender;
+      const cnt=S.messages.filter(m=>m.from===sender&&!m.hidden).length;
+      if(!cnt){toast("숨길 쪽지가 없습니다");return}
+      if(!confirm('"'+sender+'"님이 보낸 쪽지 '+cnt+'건을 모두 숨깁니다.\n숨긴 쪽지는 대화·검색에서 제외되며, 숨김 탭에서 개별 복원할 수 있습니다.\n\n계속하시겠습니까?'))return;
+      const hidden=await hideAllFromSender(sender);
+      S.active=null;
+      render();
+      toast('🗂️ "'+sender+'"님의 쪽지 '+hidden+'건을 숨겼습니다');
+    };
+  }
   // 검색 네비 버튼 이벤트
   const snPrev=$("snPrev"),snNext=$("snNext");
   if(snPrev){
