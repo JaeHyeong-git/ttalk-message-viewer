@@ -80,25 +80,26 @@
   .src-tag{font-size:9.5px;border:1px solid currentColor;border-radius:4px;padding:0 4px;opacity:.5}
   mark{background:var(--highlight);color:#2a2200;border-radius:2px;padding:0 1px}
 
-  /* ===== 별표 버튼 ===== */
-  /* 말풍선 액션 버튼 (별표 + 숨기기) */
+  /* ===== 말풍선 액션 버튼 (별표 + 숨기기) ===== */
   .bubble{position:relative}
   .msg-actions{
-    position:absolute;top:5px;right:6px;
-    display:flex;gap:1px;opacity:0;transition:opacity .15s;
+    position:absolute;top:4px;right:6px;
+    display:flex;gap:2px;opacity:.25;transition:opacity .15s;
   }
   .bubble:hover .msg-actions{opacity:1}
-  .msg-row.them .msg-actions{right:auto;left:-52px;top:7px}
+  .msg-row.them .msg-actions{right:6px;left:auto;top:4px}
   .msg-act-btn{
-    background:transparent;border:none;cursor:pointer;
-    font-size:13px;opacity:.5;transition:all .12s;
-    padding:2px 3px;line-height:1;color:inherit;
+    background:rgba(0,0,0,0.18);border:none;cursor:pointer;border-radius:5px;
+    font-size:12px;transition:all .12s;
+    width:20px;height:20px;line-height:1;color:inherit;
+    display:flex;align-items:center;justify-content:center;
   }
-  .msg-act-btn:hover{opacity:1;transform:scale(1.2)}
-  .msg-act-btn.star-on{opacity:1;color:#f0c674}
-  /* 별표된 쪽지는 호버 안 해도 별표 보이게 */
+  .msg-act-btn:hover{background:rgba(0,0,0,0.4);transform:scale(1.15)}
+  .msg-act-btn.star-on{opacity:1;color:#f5c518;background:rgba(245,197,24,0.18)}
+  /* 별표된 쪽지는 액션 버튼 영역을 항상 보이게 */
   .bubble.has-star .msg-actions{opacity:1}
-  .bubble.has-star:not(:hover) .msg-act-btn.hide-btn{opacity:0}
+  /* 본문이 액션 버튼에 가리지 않도록 우측 여백 확보 */
+  .bubble .b-body,.bubble .b-title{padding-right:44px}
 
   /* ===== 사이드바 섹션 (별표/검색어) ===== */
   .sb-section{border-bottom:1px solid var(--line-soft);background:var(--bg-panel)}
@@ -374,7 +375,7 @@
       <div class="sb-tabs">
         <div class="sb-tab on" data-tab="convo" id="tabConvo">💬 대화 <span class="sbt-count" id="tabConvoCount">0</span></div>
         <div class="sb-tab" data-tab="starred" id="tabStarred">⭐ 저장 <span class="sbt-count" id="tabStarredCount">0</span></div>
-        <div class="sb-tab" data-tab="hidden" id="tabHidden">🙈 숨김 <span class="sbt-count" id="tabHiddenCount">0</span></div>
+        <div class="sb-tab" data-tab="hidden" id="tabHidden">🗂️ 숨김 <span class="sbt-count" id="tabHiddenCount">0</span></div>
       </div>
       <div class="hidden-bar" id="hiddenBar" style="display:none">
         <span class="hb-label">숨긴 쪽지는 대화·검색에서 제외됩니다</span>
@@ -705,14 +706,14 @@ function renderSidebar(){
 
   if(S.tab==="hidden"){
     const sorted=[...hiddenMsgs].sort((a,b)=>b.time.localeCompare(a.time));
-    if(!sorted.length){el.innerHTML='<div class="no-result">숨긴 쪽지가 없습니다.<br><br><span style="font-size:11px;opacity:.7">쪽지 위 🙈 버튼으로 숨길 수 있습니다.<br>숨긴 쪽지는 대화·검색에서 제외됩니다.</span></div>';return}
+    if(!sorted.length){el.innerHTML='<div class="no-result">숨긴 쪽지가 없습니다.<br><br><span style="font-size:11px;opacity:.7">쪽지 위 🗂️ 버튼으로 숨길 수 있습니다.<br>숨긴 쪽지는 대화·검색에서 제외됩니다.</span></div>';return}
     for(const m of sorted){
       const d=document.createElement("div");
       d.className="convo-item";
       const otherName=m.from===S.myName?(m.to||"").split(",")[0]:m.from;
       const pv=(m.title&&m.origin==="main")?m.title:(m.body||m.attach||"");
       d.innerHTML='<div class="avatar" style="background:'+ac(otherName)+'">'+esc(ini(otherName))+'</div>'
-        +'<div class="ci-main"><div class="ci-top"><span class="ci-name">🙈 '+esc(otherName)+'</span><span class="ci-time">'+fsh(m.time)+'</span></div>'
+        +'<div class="ci-main"><div class="ci-top"><span class="ci-name">🗂️ '+esc(otherName)+'</span><span class="ci-time">'+fsh(m.time)+'</span></div>'
         +'<div class="ci-preview">'+esc(pv.replace(/\n/g," "))+'</div></div>'
         +'<span class="ci-count" style="background:#3a3a3a;color:#bbb;cursor:pointer" data-unhide="'+esc(m._key)+'" title="숨김 해제">복원</span>';
       // 숨김 해제 버튼
@@ -835,10 +836,10 @@ function renderRight(){
     if(m.attach)inner+='<div class="b-attach">📎 '+hl(m.attach)+'</div>';
     inner+='<div class="b-meta"><span>'+ft(m.time)+'</span>'+(m.origin==="quote"?'<span class="src-tag">인용복원</span>':'')+'<span class="src-tag">'+esc(m.to)+' 수신</span></div>';
     const starOn=m.starred?"star-on":"";
-    const starIcon=m.starred?"★":"☆";
+    const starIcon=m.starred?"⭐":"☆";
     inner+='<div class="msg-actions">'+
       '<button class="msg-act-btn star-btn '+starOn+'" data-star="'+esc(m._key)+'" title="'+(m.starred?'별표 해제':'별표')+'">'+starIcon+'</button>'+
-      '<button class="msg-act-btn hide-btn" data-hide="'+esc(m._key)+'" title="이 쪽지 숨기기">🙈</button>'+
+      '<button class="msg-act-btn hide-btn" data-hide="'+esc(m._key)+'" title="이 쪽지 숨기기">🗂️</button>'+
     '</div>';
     const isCurrent=(m._key===currentMatchKey);
     const bubbleCls='bubble'+(isCurrent?' search-current':'')+(m.starred?' has-star':'');
@@ -872,7 +873,7 @@ function renderRight(){
       const key=btn.dataset.hide;
       await toggleHide(key);
       render();
-      toast("🙈 쪽지를 숨겼습니다 · 숨김 탭에서 확인 가능");
+      toast("쪽지를 숨겼습니다 · 숨김 탭에서 확인 가능");
     };
   });
   // 검색 네비 버튼 이벤트
