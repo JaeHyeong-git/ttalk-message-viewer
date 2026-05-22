@@ -232,6 +232,21 @@
   .upload-zone .uz-btn{display:inline-block;margin-top:8px;background:var(--accent-soft);border:1px solid var(--accent);color:#dcebfb;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
   .upload-zone .uz-btn:hover{background:var(--accent);color:#fff}
 
+  /* 복호화 안내 박스 */
+  .decrypt-notice{
+    background:linear-gradient(90deg, #4a3a1a, #5c4520);
+    border:1px solid #8a6530;
+    border-left:4px solid #f0c674;
+    border-radius:8px;
+    padding:11px 14px;
+    margin-bottom:14px;
+    display:flex;align-items:flex-start;gap:10px;
+  }
+  .decrypt-notice .dn-icon{font-size:18px;flex:0 0 auto;line-height:1.4}
+  .decrypt-notice .dn-text{font-size:12.5px;color:#ffeacc;line-height:1.55;flex:1 1 auto}
+  .decrypt-notice .dn-text b{color:#ffd97a;font-weight:700}
+  .decrypt-notice .dn-sub{font-size:11.5px;color:#d6c099;margin-top:3px;line-height:1.5}
+
   /* ===== 파일 추가 모달 탭 ===== */
   .add-tabs{display:flex;border-bottom:1px solid var(--line)}
   .add-tab{
@@ -415,6 +430,13 @@
     <div class="modal-body">
       <!-- 파일 탭 -->
       <div class="add-pane" id="addPaneFile">
+        <div class="decrypt-notice">
+          <span class="dn-icon">🔒</span>
+          <div class="dn-text">
+            <b>파일이 암호화되어 있다면 복호화 후 업로드해주세요.</b>
+            <div class="dn-sub">암호화된 파일은 정상적으로 읽을 수 없어요.</div>
+          </div>
+        </div>
         <div class="upload-zone" id="uploadZone">
           <div class="uz-icon">📨</div>
           <div class="uz-main">txt 파일을 여기에 끌어다 놓으세요</div>
@@ -425,6 +447,13 @@
       </div>
       <!-- 텍스트 붙여넣기 탭 -->
       <div class="add-pane" id="addPanePaste" style="display:none">
+        <div class="decrypt-notice">
+          <span class="dn-icon">🔒</span>
+          <div class="dn-text">
+            <b>메모장에서 글자가 깨져 보인다면 암호화된 파일입니다.</b>
+            <div class="dn-sub">복호화 후 다시 열어 정상적인 텍스트를 복사·붙여넣어주세요.</div>
+          </div>
+        </div>
         <div class="paste-guide">
           파일 업로드가 제한된 환경에서는, TTalk에서 내려받은 txt 파일을 메모장 등으로 열어
           전체 선택(<b>Ctrl+A</b>) &rarr; 복사(<b>Ctrl+C</b>) 후 아래에 붙여넣으세요.
@@ -970,7 +999,7 @@ function render(){
   renderUploadInfo();
   renderKeywords();
   if(!S.messages.length){
-    ra.innerHTML='<div class="empty-state"><div class="big">불러온 쪽지가 없습니다</div><div class="sm">상단의 <b>📥 쪽지 추가</b> 버튼을 클릭해<br>txt 파일을 올리거나 텍스트를 붙여넣으세요.<br>txt 파일은 화면에 직접 끌어다 놓아도 됩니다.<br><br>💾 <b>데이터는 브라우저에 영구 저장됩니다.</b></div></div>';
+    ra.innerHTML='<div class="empty-state"><div class="big">불러온 쪽지가 없습니다</div><div class="sm">상단의 <b>📥 쪽지 추가</b> 버튼을 클릭해<br>txt 파일을 올리거나 텍스트를 붙여넣으세요.<br>txt 파일은 화면에 직접 끌어다 놓아도 됩니다.<br><br>💾 <b>데이터는 브라우저에 영구 저장됩니다.</b></div><div class="decrypt-notice" style="margin-top:24px;max-width:420px;text-align:left"><span class="dn-icon">🔒</span><div class="dn-text"><b>파일이 암호화되어 있다면 복호화 후 업로드해주세요.</b><div class="dn-sub">암호화된 파일은 정상적으로 읽을 수 없어요.</div></div></div></div>';
     $("stats").innerHTML="";$("convoList").innerHTML="";
     $("tabConvoCount").textContent=0;$("tabStarredCount").textContent=0;$("tabHiddenCount").textContent=0;
     return}
